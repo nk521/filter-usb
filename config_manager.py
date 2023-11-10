@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 import os
 import pathlib
-import tomllib
-import sys
-import dacite
+import random
+import string
 import pickle
 from collections import defaultdict
 
@@ -31,6 +30,14 @@ class BlacklistConfigManager:
         # mapping of VID :: list[PIDs]
         self.blacklisted_usbs: dict[str, set[str]] = defaultdict(set)
         self.load_blacklisted_usbs()
+    
+    def populate_blacklist(self) -> None:
+        for _ in range(random.randint(5,15)):
+            vid = "".join(random.choices(string.ascii_lowercase, k=random.randint(3,10)))
+            pid = "".join(random.choices(string.ascii_lowercase, k=random.randint(3,10)))
+            self.add_blacklisted_usb(vid=vid, pid=pid)
+        
+        self.save_blacklisted_usbs()
 
     def save_blacklisted_usbs(self) -> None:
         with open(self.BLACKLISTED_USB_PICKLE_FILE, "wb") as f:
@@ -56,6 +63,34 @@ class BlacklistConfigManager:
             return True
 
         return False
+    
+    def flatten_list(self) -> None:
+        ret: list[str] = []
+        for vid, pids in self.blacklisted_usbs.items():
+            for pid in pids:
+                ret.append(f"{vid}:{pid}")
+        
+        return ret
+    
+    def unflatten_list(self, li: list[str]):
+        self.clear_blacklisted_usb_list()
+        
+        for item in li:
+            try:
+                vid_pid = item.split(":")
+            except ValueError:
+                print(f"Couldn't understand `{item}`")
+                continue
+
+            if not all(vid_pid) or not len(vid_pid) == 2:
+                print(f"Couldn't understand `{item}`")
+                continue
+
+            vid, pid = vid_pid
+            self.add_blacklisted_usb(vid, pid)
+        
+        self.save_blacklisted_usbs()
+            
 
     def clear_blacklisted_usb_list(self) -> None:
         self.blacklisted_usbs: dict[str, set[str]] = defaultdict(set)
